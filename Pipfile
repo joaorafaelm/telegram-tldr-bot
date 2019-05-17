@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pyTelegramBotAPI = "*"
+dataset = "*"
+psycopg2-binary = "*"
+summarizer = "*"
+dragnet = "*"
+validators = "*"
+
+[dev-packages]
+ipdb = "*"
+
+[requires]
+python_full_version = "3.7.3"

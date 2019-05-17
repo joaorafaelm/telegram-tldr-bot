@@ -1,0 +1,19 @@
+{
+  "name": "TLDR bot",
+  "description": "TLDR all the things",
+  "repository": "https://github.com/joaorafaelm/telegram-tldr-bot",
+  "keywords": ["python"],
+  "env": {
+    "TELEGRAM_TOKEN": {
+      "description": "A telegram token generated to the bot."
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql",
+      "options": {
+        "version": "10"
+      }
+    }
+  ]
+}
