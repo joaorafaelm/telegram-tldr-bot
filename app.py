@@ -1,4 +1,6 @@
+import csv
 import telebot
+from io import StringIO
 from os import environ
 import dataset
 import logging
@@ -23,13 +25,35 @@ db = dataset.connect(DATABASE_URL, engine_kwargs=engine_config)
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 
 
+def read_messages(messages):
+    result = []
+    sio = StringIO(messages)
+    reader = csv.reader(sio, delimiter=':')
+    for row in reader:
+        result.append(row)
+    sio.close()
+    return result
+
+
+def write_messages(messages):
+    sio = StringIO()
+    writer = csv.writer(sio, delimiter=':')
+    writer.writerows(messages)
+    result = sio.getvalue()
+    sio.close()
+    return result
+
+
 def get_messages(chat_id, limit=300):
     logger.info(f'fetching messages for {chat_id}')
     messages = db['messages']
     chat_messages = messages.find_one(chat_id=chat_id)
-    if chat_messages:
-        text = chat_messages['text']
-        chat_messages = '\n'.join(text.splitlines()[-limit:])
+    if not chat_messages:
+        return chat_messages
+
+    messages = read_messages(chat_messages['text'])
+    text = '\n'.join(t[2] for t in messages)
+    chat_messages = '\n'.join(text.splitlines()[-limit:])
     return chat_messages
 
 
@@ -61,19 +85,24 @@ def tldr(message):
     )
 
 
-@bot.message_handler(func=lambda m: True)
+@bot.message_handler(content_types=['text'])
 def messages(message):
     if message.text.startswith('/'):
         return
     messages = db['messages']
     chat_id = str(message.chat.id)
+    user_id = str(message.from_user.id)
+    username = message.from_user.username
     chat_messages = messages.find_one(chat_id=chat_id) or {}
+    message_text = read_messages(chat_messages.get('text', ''))
+    message_text.append([user_id, username, message.text])
+    message_text = write_messages(message_text)
     messages.upsert({
         'chat_id': chat_id,
-        'text': '\n'.join([chat_messages.get('text', ''), message.text])
+        'text': message_text,
     }, ['chat_id'])
 
-    logger.info(f'saving message from {chat_id}')
+    logger.info(f'saving message from user={user_id}, username={username}, chat_id={chat_id}')
 
 
 if __name__ == '__main__':
