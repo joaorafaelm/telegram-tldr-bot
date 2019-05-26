@@ -10,6 +10,7 @@ psycopg2-binary = "*"
 summarizer = "*"
 dragnet = "*"
 validators = "*"
+gtts = "*"
 
 [dev-packages]
 ipdb = "*"
