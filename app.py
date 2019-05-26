@@ -1,13 +1,16 @@
 import csv
 import telebot
-from io import StringIO
+from io import StringIO, BytesIO
 from os import environ
 import dataset
 import logging
-from summarizer import summarize
+import summarizer
 import validators
 import requests
 from dragnet import extract_content
+from gtts import gTTS
+from datetime import datetime
+import re
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -63,10 +66,9 @@ def get_webpage(url):
     return content
 
 
-@bot.message_handler(commands=['tldr'])
-def tldr(message):
+def summarize(message):
     chat_id = str(message.chat.id)
-    text = message.text.replace('/tldr', '').strip()
+    text = re.sub(r'(^\/tldr(audio)?\s*|\s+$)', '', message.text)
 
     if validators.url(text):
         logger.info(f'url found {text}')
@@ -74,15 +76,41 @@ def tldr(message):
     else:
         messages = get_messages(chat_id)
 
-    summary = summarize(". .", messages)
+    summary = summarizer.summarize(". .", messages)
     if len(summary):
         summary = '\n'.join(summary)
+
+    return summary
+
+
+@bot.message_handler(commands=['tldr'])
+def tldr(message):
+    chat_id = str(message.chat.id)
+    summary = summarize(message)
 
     logger.info(f'generating message for {chat_id}')
     bot.send_message(
         message.chat.id,
         summary or 'i need more data'
     )
+
+
+@bot.message_handler(commands=['tldraudio'])
+def tldraudio(message):
+    chat_id = str(message.chat.id)
+    logger.info(f'generating audio message for {chat_id}')
+
+    summary = summarize(message)
+
+    if summary:
+        title = datetime.now().strftime(r'tldr_%Y-%m-%d_%H:%M.mp3')
+        audio = BytesIO()
+        tts = gTTS(summary)
+        tts.write_to_fp(audio)
+        bot.send_audio(message.chat.id, audio.getvalue(), title=title)
+        audio.close()
+    else:
+        bot.send_message(message.chat.id, 'i need more data')
 
 
 @bot.message_handler(content_types=['text'])
