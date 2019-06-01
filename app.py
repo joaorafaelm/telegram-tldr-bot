@@ -52,7 +52,7 @@ def get_messages(chat_id, limit=300):
     messages = db['messages']
     chat_messages = messages.find_one(chat_id=chat_id)
     if not chat_messages:
-        return chat_messages
+        return ''
 
     messages = read_messages(chat_messages['text'])
     text = '\n'.join(t[2] for t in messages)
